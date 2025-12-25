@@ -28,7 +28,7 @@ RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /site/ /usr/share/nginx/html/
 
 # Expose HTTP port
-EXPOSE 90
+EXPOSE 80
 
 # NGINX starts automatically
 CMD ["nginx", "-g", "daemon off;"]
