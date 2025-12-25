@@ -1,39 +1,57 @@
 pipeline {
     agent any
 
+    environment {
+        IMAGE_NAME = "student-site-nginx"
+        CONTAINER_NAME = "student-site-nginx"
+        HOST_PORT = "8085"
+        CONTAINER_PORT = "80"
+    }
+
     stages {
-        stage('Deploy HTML to IIS') {
+
+        stage('Checkout Source') {
             steps {
-                powershell '''
-                Write-Host "Deploying files to IIS..."
+                checkout scm
+            }
+        }
 
-                $source = "C:\\AILabs4U\\JunkinsDemo2"
-                $destination = "C:\\inetpub\\wwwroot"
+        stage('Build Docker Image') {
+            steps {
+                echo "Building Docker image..."
+                bat """
+                docker build -t %IMAGE_NAME% .
+                """
+            }
+        }
 
-                if (!(Test-Path $source)) {
-                    Write-Error "Source folder not found: $source"
-                    exit 1
-                }
+        stage('Stop Existing Container (if any)') {
+            steps {
+                echo "Stopping old container if it exists..."
+                bat """
+                docker stop %CONTAINER_NAME% || exit 0
+                docker rm %CONTAINER_NAME% || exit 0
+                """
+            }
+        }
 
-                if (!(Test-Path $destination)) {
-                    Write-Error "IIS wwwroot not found: $destination"
-                    exit 1
-                }
-
-                Copy-Item "$source\\*" $destination -Recurse -Force
-
-                Write-Host "Deployment completed successfully."
-                '''
+        stage('Run Docker Container') {
+            steps {
+                echo "Running Docker container..."
+                bat """
+                docker run -d -p %HOST_PORT%:%CONTAINER_PORT% --name %CONTAINER_NAME% %IMAGE_NAME%
+                """
             }
         }
     }
 
     post {
         success {
-            echo 'Website deployed to IIS successfully.'
+            echo "Docker container deployed successfully."
+            echo "Access the website at: http://localhost:8085"
         }
         failure {
-            echo 'Deployment failed.'
+            echo "Docker pipeline failed."
         }
     }
 }
